@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AAI Proficiency Check Form</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding-bottom: 50px;
+    }
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 6px;
+      text-align: left;
+    }
+    h2 {
+      text-align: center;
+    }
+    button {
+      margin: 6px;
+      padding: 6px 12px;
+    }
+    textarea {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Airports Authority of India<br>Proficiency Check Proforma</h2>
+
+<form id="proficiencyForm">
+  <label>Airport: <input type="text" name="airport"></label> &nbsp;
+  <label>Unit: <input type="text" name="unit"></label> &nbsp;
+  <label>Date: <input type="date" name="date"></label> &nbsp;
+  <label>Period: <input type="text" name="period"></label><br><br>
+
+  <fieldset>
+    <legend>Controller Details</legend>
+    Name: <input type="text" name="controller_name">
+    Designation: <input type="text" name="controller_designation"><br>
+    License No: <input type="text" name="controller_license">
+    License Validity: <input type="date" name="license_validity">
+    Medical Validity: <input type="date" name="medical_validity">
+  </fieldset>
+
+  <br>
+
+  <fieldset>
+    <legend>Examiner Details</legend>
+    Name: <input type="text" name="examiner_name">
+    Designation: <input type="text" name="examiner_designation"><br>
+    License No: <input type="text" name="examiner_license">
+    License Validity: <input type="date" name="examiner_license_validity">
+    Medical Validity: <input type="date" name="examiner_medical_validity">
+  </fieldset>
+
+  <br>
+
+  <h3>Performance Evaluation (Grade 1 to 5)</h3>
+  <table>
+    <tr>
+      <th>S.N.</th>
+      <th>Performance Identifier</th>
+      <th>Grade</th>
+    </tr>
+    <tbody id="gradesTable"></tbody>
+  </table>
+
+  <br>
+  <button type="button" onclick="calculate()">🎯 Calculate</button>
+  <button type="button" onclick="saveForm()">💾 Save</button>
+  <button type="button" onclick="sendEmail()">📧 Email</button>
+  <button type="button" onclick="downloadPDF()">⬇ Download PDF</button>
+  <button type="button" onclick="window.print()">🖨️ Print</button><br><br>
+
+  <label>Marks Obtained: <input type="text" id="marks" readonly></label><br>
+  <label>Percentage: <input type="text" id="percentage" readonly></label><br>
+
+  <label><input type="checkbox" id="proficiency"> Demonstrated Proficiency</label><br>
+  <label><input type="checkbox" id="notProficient"> Did not demonstrate Proficiency</label><br><br>
+
+  <label>Remarks:<br>
+    <textarea rows="4" name="remarks"></textarea>
+  </label><br><br>
+
+  <h3>Signatures</h3>
+  Chairman/Assessor: <input type="text" name="chairman"> <br>
+  Member-1: <input type="text" name="member1"> <br>
+  Member-2: <input type="text" name="member2"> <br>
+  Assessee: <input type="text" name="assessee"> <br>
+</form>
+
+<h3>📋 Submitted Form Details</h3>
+<pre id="outputBox" style="background:#f4f4f4;padding:10px;border:1px solid #ccc;"></pre>
+
+<script>
+  const items = [
+    "Impending conflicting traffic detected and resolved",
+    "Applied separation between aircrafts on maneuvering area & obstructions",
+    "Traffic planned appropriately taking SOPs and performance into account",
+    "Maintained safe and orderly traffic flow with least delay",
+    "Maintained surveillance visually or via tools",
+    "Used correct phraseologies",
+    "Clear & correct radiotelephony technique",
+    "Used correct call signs, monitored read-backs",
+    "Coordinated with other ATC units in English",
+    "Handled transfer of control/communication promptly"
+  ];
+
+  const tableBody = document.getElementById("gradesTable");
+  items.forEach((item, i) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${item}</td>
+      <td>
+        <select name="grade${i + 1}" class="grade">
+          <option value="5">5</option>
+          <option value="4">4</option>
+          <option value="3">3</option>
+          <option value="2">2</option>
+          <option value="1">1</option>
+        </select>
+      </td>`;
+    tableBody.appendChild(row);
+  });
+
+  function calculate() {
+    const grades = document.querySelectorAll('.grade');
+    let total = 0;
+    grades.forEach(g => total += parseInt(g.value));
+    document.getElementById('marks').value = total;
+    const percentage = (total / (grades.length * 5)) * 100;
+    document.getElementById('percentage').value = percentage.toFixed(2) + "%";
+    document.getElementById('proficiency').checked = percentage >= 80;
+    document.getElementById('notProficient').checked = percentage < 80;
+  }
+
+  function saveForm() {
+    const form = new FormData(document.getElementById("proficiencyForm"));
+    let data = {};
+    form.forEach((value, key) => data[key] = value);
+    localStorage.setItem("proficiencyData", JSON.stringify(data));
+    showOutput(data);
+    alert("✅ Form saved in browser (local storage)");
+  }
+
+  function showOutput(data) {
+    let output = "";
+    for (let key in data) {
+      output += `${key}: ${data[key]}\n`;
+    }
+    document.getElementById("outputBox").textContent = output;
+  }
+
+  function sendEmail() {
+    const form = new FormData(document.getElementById("proficiencyForm"));
+    let body = "";
+    form.forEach((value, key) => body += `${key}: ${value}\n`);
+    const mailtoLink = `mailto:someone@example.com?subject=AAI Proficiency Check&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
+  }
+
+  async function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let content = document.getElementById("outputBox").textContent || "Please fill and save the form first.";
+    doc.setFontSize(10);
+    doc.text(content, 10, 10);
+    doc.save("AAI-Proficiency-Form.pdf");
+  }
+
+  window.onload = function () {
+    const saved = localStorage.getItem("proficiencyData");
+    if (saved) {
+      const data = JSON.parse(saved);
+      for (let key in data) {
+        const field = document.querySelector(`[name="${key}"]`);
+        if (field) field.value = data[key];
+      }
+      showOutput(data);
+    }
+  }
+</script>
+
+</body>
+</html>
